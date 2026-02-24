@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClassCall — Live Blockchain Voting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg-primary:#06060f;--bg-card:rgba(255,255,255,0.04);--bg-card-hover:rgba(255,255,255,0.07);--border-card:rgba(255,255,255,0.08);--text-primary:#f1f5f9;--text-secondary:#94a3b8;--text-muted:#64748b;--accent-purple:#8b5cf6;--accent-cyan:#06b6d4;--accent-amber:#f59e0b;--accent-green:#10b981;--accent-red:#ef4444;--accent-pink:#ec4899;--gradient-primary:linear-gradient(135deg,#8b5cf6,#6366f1,#4f46e5);--gradient-secondary:linear-gradient(135deg,#06b6d4,#3b82f6);--radius-sm:8px;--radius-md:14px;--radius-lg:20px;--radius-xl:28px}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh;overflow-x:hidden;line-height:1.6}
+a{color:var(--accent-cyan);text-decoration:none}
+.bg-orbs{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.bg-orb{position:absolute;border-radius:50%;filter:blur(100px);opacity:.15}
+.bg-orb:nth-child(1){width:600px;height:600px;background:var(--accent-purple);top:-200px;left:-100px;animation:o1 25s ease-in-out infinite}
+.bg-orb:nth-child(2){width:500px;height:500px;background:var(--accent-cyan);bottom:-150px;right:-100px;animation:o2 30s ease-in-out infinite}
+.bg-orb:nth-child(3){width:400px;height:400px;background:var(--accent-pink);top:50%;left:50%;transform:translate(-50%,-50%);animation:o3 20s ease-in-out infinite}
+@keyframes o1{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(100px,80px) scale(1.1)}66%{transform:translate(-50px,120px) scale(.95)}}
+@keyframes o2{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(-120px,-80px) scale(1.15)}66%{transform:translate(60px,-100px) scale(.9)}}
+@keyframes o3{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-30%,-60%) scale(1.2)}}
+.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:60px 60px}
+header{position:fixed;top:0;left:0;right:0;z-index:100;padding:16px 32px;display:flex;align-items:center;justify-content:space-between;background:rgba(6,6,15,.8);backdrop-filter:blur(20px);border-bottom:1px solid var(--border-card)}
+.logo{font-size:1.6rem;font-weight:900;letter-spacing:-.5px;background:linear-gradient(135deg,#a78bfa,#818cf8,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo-sub{font-size:.7rem;font-weight:400;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-left:2px}
+.header-right{display:flex;align-items:center;gap:14px}
+.network-badge{display:flex;align-items:center;gap:8px;padding:8px 16px;border-radius:100px;font-size:.8rem;font-weight:500;background:rgba(16,185,129,.1);color:var(--accent-green);border:1px solid rgba(16,185,129,.2)}
+.network-dot{width:8px;height:8px;border-radius:50%;background:var(--accent-green);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
+.btn-connect{padding:10px 24px;border-radius:100px;border:none;font-family:inherit;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .3s;background:var(--gradient-primary);color:#fff}
+.btn-connect:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(139,92,246,.4)}
+.btn-connect.connected{background:var(--bg-card);border:1px solid var(--border-card);color:var(--text-secondary);position:relative;overflow:hidden}
+.btn-connect.connected .addr{transition:opacity .2s}
+.btn-connect.connected:hover .addr{opacity:0}
+.btn-connect.connected .dc-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;color:var(--accent-red);font-weight:700}
+.btn-connect.connected:hover .dc-label{opacity:1}
+.btn-connect.connected:hover{border-color:rgba(239,68,68,.4)}
+main{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:100px 24px 60px}
+.hero{text-align:center;padding:80px 20px 60px;animation:fadeUp .8s ease}
+.hero-icon{font-size:4rem;margin-bottom:20px;display:block}
+.hero h1{font-size:3rem;font-weight:900;letter-spacing:-1px;margin-bottom:16px;background:linear-gradient(135deg,#f1f5f9,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{font-size:1.15rem;color:var(--text-secondary);max-width:500px;margin:0 auto 36px;line-height:1.7}
+@keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+.section-title{display:flex;align-items:center;gap:14px;margin-bottom:28px;font-size:1.3rem;font-weight:700}
+.section-title .icon{width:40px;height:40px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:1.2rem}
+.section-title .count{margin-left:auto;font-size:.8rem;font-weight:500;color:var(--text-muted);padding:4px 14px;border-radius:100px;background:rgba(255,255,255,.05)}
+.admin-section{margin-bottom:48px}
+.admin-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-radius:var(--radius-lg);background:linear-gradient(135deg,rgba(139,92,246,.1),rgba(99,102,241,.05));border:1px solid rgba(139,92,246,.2);color:var(--text-primary);font-family:inherit;font-size:1rem;font-weight:600;cursor:pointer;transition:all .3s}
+.admin-toggle:hover{background:linear-gradient(135deg,rgba(139,92,246,.15),rgba(99,102,241,.1))}
+.admin-toggle .arrow{transition:transform .3s;font-size:.8rem}
+.admin-toggle.open .arrow{transform:rotate(180deg)}
+.admin-panel{max-height:0;overflow:hidden;transition:max-height .5s cubic-bezier(.4,0,.2,1),opacity .3s,padding .3s;opacity:0}
+.admin-panel.open{max-height:2000px;opacity:1;padding-top:20px}
+.admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.admin-card{padding:28px;border-radius:var(--radius-lg);background:var(--bg-card);border:1px solid var(--border-card);backdrop-filter:blur(10px)}
+.admin-card h3{font-size:1rem;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:10px}
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:.78rem;font-weight:600;color:var(--text-secondary);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.form-input{width:100%;padding:12px 16px;border-radius:var(--radius-sm);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--text-primary);font-family:inherit;font-size:.9rem;outline:none;transition:border-color .3s,box-shadow .3s}
+.form-input:focus{border-color:var(--accent-purple);box-shadow:0 0 0 3px rgba(139,92,246,.15)}
+.form-input::placeholder{color:var(--text-muted)}
+.options-container{display:flex;flex-direction:column;gap:8px}
+.option-row{display:flex;gap:8px;align-items:center;animation:fadeUp .3s ease}
+.option-row .form-input{flex:1}
+.btn-remove-option{width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.1);color:var(--accent-red);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.1rem;transition:all .2s}
+.btn-remove-option:hover{background:rgba(239,68,68,.2)}
+.btn-add-option{padding:10px;border-radius:var(--radius-sm);border:1px dashed rgba(255,255,255,.15);background:transparent;color:var(--text-secondary);font-family:inherit;font-size:.85rem;cursor:pointer;transition:all .2s}
+.btn-add-option:hover{border-color:var(--accent-purple);color:var(--accent-purple)}
+.btn-submit{width:100%;padding:14px 24px;border-radius:var(--radius-md);border:none;font-family:inherit;font-size:.9rem;font-weight:700;cursor:pointer;transition:all .3s;color:#fff;margin-top:8px;text-transform:uppercase;letter-spacing:1px}
+.btn-submit.purple{background:var(--gradient-primary)}
+.btn-submit.cyan{background:var(--gradient-secondary)}
+.btn-submit:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(139,92,246,.3)}
+.btn-submit:disabled{opacity:.4;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+.questions-section{margin-bottom:56px}
+.questions-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:24px}
+.empty-state{text-align:center;padding:60px 20px;color:var(--text-muted);grid-column:1/-1}
+.empty-state .empty-icon{font-size:3rem;display:block;margin-bottom:12px;opacity:.5}
+.q-card{border-radius:var(--radius-xl);background:var(--bg-card);border:1px solid var(--border-card);backdrop-filter:blur(12px);padding:32px;transition:all .4s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden}
+.q-card.entering{animation:cardIn .5s ease both}
+.q-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--gradient-primary);opacity:0;transition:opacity .3s}
+.q-card:hover{background:var(--bg-card-hover)}
+.q-card:hover::before{opacity:1}
+.q-card.ended{opacity:.85}
+.q-card.ended::before{background:linear-gradient(135deg,#f59e0b,#ef4444)}
+@keyframes cardIn{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.q-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px}
+.q-badge{flex-shrink:0;padding:4px 12px;border-radius:100px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px}
+.q-badge.yesno{background:rgba(139,92,246,.15);color:var(--accent-purple);border:1px solid rgba(139,92,246,.25)}
+.q-badge.multi{background:rgba(6,182,212,.15);color:var(--accent-cyan);border:1px solid rgba(6,182,212,.25)}
+.q-badge.ended-badge{background:rgba(245,158,11,.15);color:var(--accent-amber);border:1px solid rgba(245,158,11,.25)}
+.q-badge.hidden-badge{background:rgba(239,68,68,.15);color:var(--accent-red);border:1px solid rgba(239,68,68,.25)}
+.q-index{font-size:.7rem;color:var(--text-muted);font-weight:500}
+.q-text{font-size:1.25rem;font-weight:700;line-height:1.4;margin-bottom:20px;letter-spacing:-.3px}
+.q-timer{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:100px;font-size:.8rem;font-weight:600;margin-bottom:18px;background:rgba(245,158,11,.1);color:var(--accent-amber);border:1px solid rgba(245,158,11,.2)}
+.q-timer.urgent{background:rgba(239,68,68,.1);color:var(--accent-red);border-color:rgba(239,68,68,.25);animation:timerPulse 1s ease-in-out infinite}
+@keyframes timerPulse{0%,100%{opacity:1}50%{opacity:.6}}
+.q-timer.no-limit{background:rgba(16,185,129,.1);color:var(--accent-green);border-color:rgba(16,185,129,.2)}
+.q-options{display:flex;flex-direction:column;gap:12px}
+.option-btn{width:100%;position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-radius:var(--radius-md);border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--text-primary);font-family:inherit;font-size:.95rem;font-weight:500;cursor:pointer;transition:all .3s;overflow:hidden;text-align:left}
+.option-btn:hover:not(:disabled){border-color:var(--accent-purple);background:rgba(139,92,246,.08);transform:translateX(4px)}
+.option-btn:disabled{cursor:default}
+.option-btn .opt-name{position:relative;z-index:2}
+.option-btn .opt-stats{position:relative;z-index:2;display:flex;align-items:center;gap:10px;font-size:.8rem;color:var(--text-secondary);font-weight:600}
+.option-btn .opt-stats .pct{min-width:42px;text-align:right}
+.option-btn .progress-fill{position:absolute;top:0;left:0;bottom:0;z-index:1;border-radius:var(--radius-md);transition:width .8s cubic-bezier(.4,0,.2,1)}
+.fill-purple{background:rgba(139,92,246,.12)}.fill-cyan{background:rgba(6,182,212,.12)}.fill-amber{background:rgba(245,158,11,.12)}.fill-green{background:rgba(16,185,129,.12)}.fill-pink{background:rgba(236,72,153,.12)}
+.option-btn.winner-option{border-color:var(--accent-amber)!important;background:rgba(245,158,11,.08)!important}
+.option-btn.winner-option .opt-name{color:var(--accent-amber);font-weight:700}
+.winner-label{font-size:.7rem;padding:2px 8px;border-radius:100px;background:rgba(245,158,11,.2);color:var(--accent-amber);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-left:8px}
+.q-voted-badge{display:none;align-items:center;gap:6px;margin-top:12px;padding:6px 14px;border-radius:100px;font-size:.78rem;font-weight:600;color:var(--accent-green);background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2)}
+.q-voted-badge.visible{display:inline-flex}
+.q-total-votes{text-align:center;font-size:.8rem;color:var(--text-muted);margin-top:16px;font-weight:500}
+.btn-hide-q{display:none;margin-top:16px;width:100%;padding:10px;border-radius:var(--radius-sm);border:1px solid rgba(239,68,68,.2);background:rgba(239,68,68,.05);color:var(--accent-red);font-family:inherit;font-size:.8rem;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-hide-q.visible{display:block}
+.btn-hide-q:hover{background:rgba(239,68,68,.12)}
+.q-card.vote-flash{animation:vflash .8s ease}
+@keyframes vflash{0%{box-shadow:0 0 0 0 rgba(139,92,246,0)}40%{box-shadow:0 0 40px 4px rgba(139,92,246,.35)}100%{box-shadow:0 0 0 0 rgba(139,92,246,0)}}
+.toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px;pointer-events:none}
+.toast{pointer-events:auto;padding:14px 22px;border-radius:var(--radius-md);backdrop-filter:blur(20px);font-size:.85rem;font-weight:500;display:flex;align-items:center;gap:10px;animation:tIn .4s ease,tOut .4s ease 3.6s forwards;max-width:380px;border:1px solid}
+.toast.success{background:rgba(16,185,129,.15);color:#6ee7b7;border-color:rgba(16,185,129,.3)}
+.toast.error{background:rgba(239,68,68,.15);color:#fca5a5;border-color:rgba(239,68,68,.3)}
+.toast.info{background:rgba(99,102,241,.15);color:#a5b4fc;border-color:rgba(99,102,241,.3)}
+@keyframes tIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+@keyframes tOut{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(40px)}}
+.confetti-piece{position:fixed;top:-10px;z-index:10000;pointer-events:none;animation:cfall linear forwards}
+@keyframes cfall{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(105vh) rotate(720deg);opacity:0}}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+footer{position:relative;z-index:1;text-align:center;padding:40px 20px;font-size:.78rem;color:var(--text-muted);border-top:1px solid var(--border-card)}
+footer a{color:var(--accent-purple)}
+.footer-address{font-family:'Courier New',monospace;font-size:.72rem;word-break:break-all;margin-top:4px}
+@media(max-width:768px){.admin-grid{grid-template-columns:1fr}}
+@media(max-width:600px){header{padding:12px 16px}.logo{font-size:1.2rem}.network-badge span:not(.network-dot){display:none}main{padding:80px 14px 40px}.hero h1{font-size:2rem}.q-card{padding:22px}.q-text{font-size:1.1rem}.questions-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="bg-orbs"><div class="bg-orb"></div><div class="bg-orb"></div><div class="bg-orb"></div></div>
+<div class="bg-grid"></div>
+<div class="toast-container" id="toastBox"></div>
+<header>
+  <div><div class="logo">ClassCall</div><div class="logo-sub">Live Blockchain Voting</div></div>
+  <div class="header-right">
+    <div class="network-badge" id="netBadge" style="display:none"><span class="network-dot"></span><span>Base Sepolia</span></div>
+    <button class="btn-connect" id="btnHead">Connect Wallet</button>
+  </div>
+</header>
+<main>
+  <div class="hero" id="hero">
+    <span class="hero-icon">🗳️</span>
+    <h1>Vote Live on the Blockchain</h1>
+    <p>Connect your MetaMask wallet to participate in live polls. Every vote is permanently recorded on-chain.</p>
+    <button class="btn-connect" id="btnHero" style="padding:14px 40px;font-size:1rem">Connect MetaMask to Start</button>
+  </div>
+  <div id="app" style="display:none">
+    <div class="admin-section" id="adminWrap" style="display:none">
+      <button class="admin-toggle" id="adminToggle"><span>⚡ Owner Control Panel</span><span class="arrow">▼</span></button>
+      <div class="admin-panel" id="adminPanel">
+        <div class="admin-grid">
+          <div class="admin-card">
+            <h3>🟢 Add Yes / No Question</h3>
+            <div class="form-group"><label class="form-label">Question Text</label><input class="form-input" id="ynText" placeholder='e.g. "Is a hotdog a sandwich?"'></div>
+            <div class="form-group"><label class="form-label">Duration (seconds, 0 = no limit)</label><input class="form-input" type="number" id="ynDur" value="0" min="0"></div>
+            <button class="btn-submit purple" id="btnYN">Create Yes/No Poll</button>
+          </div>
+          <div class="admin-card">
+            <h3>🔵 Add Multi-Choice Question</h3>
+            <div class="form-group"><label class="form-label">Question Text</label><input class="form-input" id="mcText" placeholder='e.g. "Best pizza topping?"'></div>
+            <div class="form-group">
+              <label class="form-label">Options</label>
+              <div class="options-container" id="mcOpts">
+                <div class="option-row"><input class="form-input mc-opt" placeholder="Option 1"><button class="btn-remove-option" data-act="rmopt">×</button></div>
+                <div class="option-row"><input class="form-input mc-opt" placeholder="Option 2"><button class="btn-remove-option" data-act="rmopt">×</button></div>
+              </div>
+              <button class="btn-add-option" id="btnAddOpt">+ Add another option</button>
+            </div>
+            <div class="form-group"><label class="form-label">Duration (seconds, 0 = no limit)</label><input class="form-input" type="number" id="mcDur" value="0" min="0"></div>
+            <button class="btn-submit cyan" id="btnMC">Create Multi-Choice Poll</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="questions-section">
+      <div class="section-title"><div class="icon" style="background:rgba(16,185,129,.15)">🟢</div>Live Polls<span class="count" id="cntActive">0</span></div>
+      <div class="questions-grid" id="gridActive"><div class="empty-state" id="emptyActive"><span class="empty-icon">📋</span><p>No active polls right now</p></div></div>
+    </div>
+    <div class="questions-section" id="endedWrap" style="display:none">
+      <div class="section-title"><div class="icon" style="background:rgba(245,158,11,.15)">🏆</div>Ended Polls<span class="count" id="cntEnded">0</span></div>
+      <div class="questions-grid" id="gridEnded"></div>
+    </div>
+  </div>
+</main>
+<footer><div>ClassCall — Built on <a href="https://base.org" target="_blank">Base</a> Sepolia Testnet</div><div class="footer-address" id="footAddr"></div></footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+<script>
+"use strict";
+
+// ═════════════════════════════════════════════════════
+//  CONFIG
+// ═════════════════════════════════════════════════════
+const CFG = Object.freeze({
+    addr:    "0x84777493a47CeB52D1Ef1A848F554f3E95c7a6F5",
+    chain:   84532,
+    hex:     "0x14a34",
+    name:    "Base Sepolia",
+    rpc:     "https://sepolia.base.org",
+    scan:    "https://sepolia.basescan.org",
+});
+const ABI = [
+    "function addQuestion(uint8,string,string[],uint256) returns(uint256)",
+    "function hideQuestion(uint256)",
+    "function castVote(uint256,uint256)",
+    "function getWinner(uint256) view returns(string,uint256,string[],uint256[])",
+    "function getQuestion(uint256) view returns(string,uint8,string[],uint256[],bool,uint256)",
+    "function getQuestionCount() view returns(uint256)",
+    "function isVotingOpen(uint256) view returns(bool)",
+    "function checkIfVoted(uint256,address) view returns(bool)",
+    "function owner() view returns(address)",
+    "event QuestionAdded(uint256 indexed,uint8,string,uint256)",
+    "event QuestionHidden(uint256 indexed)",
+    "event VoteCast(address indexed,uint256 indexed,uint256,string,uint256)"
+];
+const FILLS = ["fill-purple","fill-cyan","fill-amber","fill-green","fill-pink"];
+
+// ═════════════════════════════════════════════════════
+//  STATE
+// ═════════════════════════════════════════════════════
+const S = {
+    provider:null, signer:null, wc:null, rc:null,
+    addr:null, owner:false, on:false,
+    qs: new Map(),          // index → QuestionRecord
+    gen:0, busy:false,      // load mutex
+    voting: new Set(),      // question indices with pending vote tx
+};
+
+// ═════════════════════════════════════════════════════
+//  DOM REFS (cached once in init)
+// ═════════════════════════════════════════════════════
+let D = {};
+
+// ═════════════════════════════════════════════════════
+//  TOASTS — deduplicated
+// ═════════════════════════════════════════════════════
+const Toast = {
+    _seen: new Map(),
+    show(msg, type="info") {
+        const k = type+msg, now = Date.now();
+        if (this._seen.has(k) && this._seen.get(k) > now) return;
+        this._seen.set(k, now + 2000);
+        const ic = {success:"✅",error:"❌",info:"ℹ️"}[type]||"";
+        const el = document.createElement("div");
+        el.className = "toast " + type;
+        el.innerHTML = `<span>${ic}</span><span>${esc(msg)}</span>`;
+        D.toasts.appendChild(el);
+        setTimeout(()=>el.remove(), 4200);
+    },
+    gc() { const n=Date.now(); for(const[k,v]of this._seen)if(v<n)this._seen.delete(k); }
+};
+
+// ═════════════════════════════════════════════════════
+//  TIMERS — leak-proof
+// ═════════════════════════════════════════════════════
+const TM = {
+    _iv: new Map(),
+
+    start(qi, dl) {
+        this.stop(qi);
+        const el = document.getElementById("tm-"+qi);
+        if (!el) return;
+        const tick = () => {
+            const rem = dl - Math.floor(Date.now()/1000);
+            if (rem <= 0) {
+                el.textContent = "⏱ Time's up!";
+                el.className = "q-timer urgent";
+                this.stop(qi);
+                this._expire(qi);
+                return;
+            }
+            const h=Math.floor(rem/3600), m=Math.floor((rem%3600)/60), s=rem%60;
+            let t = "⏱ ";
+            if(h>0) t+=h+"h ";
+            if(m>0||h>0) t+=m+"m ";
+            t += s+"s remaining";
+            el.textContent = t;
+            el.className = rem<=30 ? "q-timer urgent" : "q-timer";
+        };
+        tick();
+        this._iv.set(qi, setInterval(tick, 1000));
+    },
+
+    stop(qi) { if(this._iv.has(qi)){clearInterval(this._iv.get(qi));this._iv.delete(qi);} },
+    stopAll() { for(const v of this._iv.values()) clearInterval(v); this._iv.clear(); },
+
+    // Immediately transition an expired question
+    async _expire(qi) {
+        const q = await Chain.fetchOne(qi);
+        if (!q) return;
+        // If chain still reports open (block timestamp lag), retry once
+        if (q.isOpen) {
+            setTimeout(async()=>{
+                await Chain.fetchOne(qi);
+                UI.placeCard(qi);
+                UI.counts();
+            }, 3000);
+            return;
+        }
+        UI.placeCard(qi);
+        UI.counts();
+    }
+};
+
+// Heartbeat: catch timers that froze while tab was backgrounded
+setInterval(()=>{
+    const now = Math.floor(Date.now()/1000);
+    for(const[qi,q] of S.qs) {
+        if(q.isOpen && q.deadline>0 && now > q.deadline && !TM._iv.has(qi)) {
+            TM._expire(qi);
+        }
+    }
+}, 5000);
+
+// ═════════════════════════════════════════════════════
+//  CHAIN — all blockchain calls
+// ═════════════════════════════════════════════════════
+const Chain = {
+    // Full parallel load of all questions
+    async fetchAll() {
+        const g = ++S.gen;
+        if (S.busy) return false;
+        S.busy = true;
+        try {
+            const count = (await S.rc.getQuestionCount()).toNumber();
+            const tasks = [];
+            for (let i=0; i<count; i++) tasks.push(this._load(i));
+            const res = await Promise.allSettled(tasks);
+            if (g !== S.gen) return false;
+            S.qs.clear();
+            res.forEach((r,i)=>{ if(r.status==="fulfilled"&&r.value) S.qs.set(i,r.value); });
+            return true;
+        } finally { if(g===S.gen) S.busy=false; }
+    },
+
+    // Single question fetch, updates cache, returns record
+    async fetchOne(qi) {
+        const r = await this._load(qi);
+        if (r) S.qs.set(qi, r);
+        return r;
+    },
+
+    async _load(qi) {
+        try {
+            const [qData, isOpen, voted] = await Promise.all([
+                S.rc.getQuestion(qi),
+                S.rc.isVotingOpen(qi),
+                S.addr ? S.rc.checkIfVoted(qi, S.addr) : Promise.resolve(false),
+            ]);
+            const [text, qType, opts, vc, hidden, dl] = qData;
+            const counts = vc.map(v=>v.toNumber?v.toNumber():Number(v));
+            const total = counts.reduce((a,b)=>a+b,0);
+            const deadline = dl.toNumber?dl.toNumber():Number(dl);
+
+            let winner = null;
+            if (!isOpen) {
+                try {
+                    const [wn,wv,rn,rv] = await S.rc.getWinner(qi);
+                    winner = {
+                        name:wn,
+                        votes:wv.toNumber?wv.toNumber():Number(wv),
+                        rNames:[...rn],
+                        rVotes:rv.map(v=>v.toNumber?v.toNumber():Number(v)),
+                    };
+                } catch(_){}
+            }
+
+            return {
+                index:qi, text, qType, options:[...opts],
+                votes:counts, hidden, deadline,
+                isOpen, voted, total, winner,
+            };
+        } catch(e) { console.error("fetch",qi,e); return null; }
+    },
+};
+
+// ═════════════════════════════════════════════════════
+//  EVENTS — subscribe once, never stack
+// ═════════════════════════════════════════════════════
+const Ev = {
+    _on: false, _h: {},
+
+    sub() {
+        if (this._on) return;
+        this._on = true;
+
+        this._h.vote = (voter, qIdx, optIdx, optName, newTotal) => {
+            const qi = qIdx.toNumber();
+            const oi = optIdx.toNumber();
+            const v  = voter.toLowerCase();
+            const isSelf = (v === S.addr);
+
+            // Update cache from event data regardless of who voted
+            const q = S.qs.get(qi);
+            if (!q) return;
+            q.votes[oi] = newTotal.toNumber ? newTotal.toNumber() :
+        Number(newTotal);
+            q.total = q.votes.reduce((a,b)=>a+b,0);
+
+            if (isSelf) {
+                // Own vote: if vote() already rebuilt the card, this is a
+        // harmless cache update. If vote() hasn't finished yet
+        // (fast block), patch the counts so the UI is correct.
+                UI.patchVotes(qi);
+                return;
+            }
+
+            // Other voter: patch counts and flash
+            UI.patchVotes(qi);
+            const card = document.getElementById("qc-"+qi);
+            if (card) {
+                card.classList.remove("vote-flash");
+                void card.offsetWidth;
+                card.classList.add("vote-flash");
+            }
+                        
+            Toast.show(`New vote on #${qi+1}: "${optName}"`, "info");
+        };
+
+        this._h.added = (qIdx) => {
+            const qi = qIdx.toNumber();
+            // If already in cache (our own addQuestion), skip
+            if (S.qs.has(qi)) return;
+            // Another client added a question — fetch and render
+            Chain.fetchOne(qi).then(r => {
+                if (!r) return;
+                if (r.hidden && !S.owner) return;  // hidden from non-owners
+                UI.placeCard(qi);
+                UI.counts();
+                Toast.show(`New poll: #${qi+1}`, "info");
+            });
+        };
+
+        this._h.hidden = (qIdx) => {
+            const qi = qIdx.toNumber();
+            const cached = S.qs.get(qi);
+            // If we already marked it hidden (our own hide), skip
+            if (cached && cached.hidden) return;
+
+            Chain.fetchOne(qi).then(() => {
+                if (!S.owner) {
+                    // Non-owner: remove the card entirely
+                    TM.stop(qi);
+                    const c = document.getElementById("qc-"+qi);
+                    if (c) c.remove();
+                    UI.empty();
+                } else {
+                    // Owner: rebuild in ended section
+                    UI.placeCard(qi);
+                }
+                UI.counts();
+                Toast.show(`Poll #${qi+1} ended`, "info");
+            });
+        };
+
+        S.wc.on("VoteCast",      this._h.vote);
+        S.wc.on("QuestionAdded", this._h.added);
+        S.wc.on("QuestionHidden",this._h.hidden);
+    },
+
+    unsub() {
+        if (!this._on || !S.wc) return;
+        S.wc.off("VoteCast",      this._h.vote);
+        S.wc.off("QuestionAdded", this._h.added);
+        S.wc.off("QuestionHidden",this._h.hidden);
+        this._on = false;
+        this._h = {};
+    },
+};
+
+// ═════════════════════════════════════════════════════
+//  UI RENDERER
+// ═════════════════════════════════════════════════════
+const UI = {
+
+    // Full render from cache — used only once after initial fetchAll
+    renderAll() {
+        TM.stopAll();
+        D.gridA.innerHTML = "";
+        D.gridE.innerHTML = "";
+        const sorted = [...S.qs.values()].sort((a,b)=>a.index-b.index);
+        for (const q of sorted) {
+            // ★ Hidden polls invisible to non-owners
+            if (q.hidden && !S.owner) continue;
+            const card = this._card(q);
+            (q.isOpen ? D.gridA : D.gridE).appendChild(card);
+        }
+        this.empty();
+        this.counts();
+    },
+
+    // Place (or replace) a single card in the correct grid
+    placeCard(qi) {
+        const q = S.qs.get(qi);
+        if (!q) return;
+
+        TM.stop(qi);
+        const old = document.getElementById("qc-"+qi);
+        if (old) old.remove();
+
+        // ★ Hidden polls invisible to non-owners
+        if (q.hidden && !S.owner) { this.empty(); return; }
+
+        const card = this._card(q);
+        card.classList.add("entering");
+        (q.isOpen ? D.gridA : D.gridE).appendChild(card);
+        this.empty();
+    },
+
+    // Patch only vote counts + progress bars — no DOM rebuild
+    patchVotes(qi) {
+        const q = S.qs.get(qi);
+        if (!q) return;
+        for (let i=0; i<q.options.length; i++) {
+            const cnt = q.votes[i];
+            const pct = q.total>0 ? Math.round(cnt/q.total*100) : 0;
+            const st = document.getElementById(`st-${qi}-${i}`);
+            if (st) { st.querySelector(".vc").textContent=cnt; st.querySelector(".pct").textContent=pct+"%"; }
+            const fl = document.getElementById(`fl-${qi}-${i}`);
+            if (fl) fl.style.width = pct+"%";
+        }
+        const tot = document.getElementById("tot-"+qi);
+        if (tot) tot.textContent = q.total+" total vote"+(q.total!==1?"s":"");
+
+        // Show voted badge + disable buttons if just voted
+        if (q.voted) {
+            const badge = document.getElementById("vb-"+qi);
+            if (badge) badge.classList.add("visible");
+            for (let i=0; i<q.options.length; i++) {
+                const b = document.getElementById(`ob-${qi}-${i}`);
+                if (b) b.disabled = true;
+            }
+        }
+    },
+
+    counts() {
+        let a=0, e=0;
+        for (const q of S.qs.values()) {
+            if (q.hidden && !S.owner) continue;
+            if (q.isOpen) a++; else e++;
+        }
+        D.cntA.textContent = a;
+        D.cntE.textContent = e;
+        D.endWrap.style.display = e>0 ? "block" : "none";
+    },
+
+    empty() {
+        const has = D.gridA.querySelector(".q-card");
+        let el = document.getElementById("emptyActive");
+        if (!has && !el) {
+            const d = document.createElement("div");
+            d.className="empty-state"; d.id="emptyActive";
+            d.innerHTML='<span class="empty-icon">📋</span><p>No active polls right now</p>';
+            D.gridA.appendChild(d);
+        } else if (has && el) el.remove();
+    },
+
+    connected(addr) {
+        D.btnH.innerHTML = `<span class="addr">${trunc(addr)}</span><span class="dc-label">Disconnect</span>`;
+        D.btnH.classList.add("connected");
+        D.net.style.display = "flex";
+        D.hero.style.display = "none";
+        D.app.style.display = "block";
+        D.foot.textContent = "Contract: "+CFG.addr;
+        if (S.owner) D.adminW.style.display = "block";
+    },
+
+    disconnected() {
+        D.btnH.innerHTML = "Connect Wallet";
+        D.btnH.classList.remove("connected");
+        D.net.style.display = "none";
+        D.hero.style.display = "block";
+        D.app.style.display = "none";
+        D.adminW.style.display = "none";
+        D.gridA.innerHTML = ""; D.gridE.innerHTML = "";
+        D.foot.textContent = "";
+    },
+
+    btnLoad(btn, txt) {
+        const orig = btn.textContent;
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner"></span> ${txt}`;
+        return () => { btn.disabled=false; btn.textContent=orig; };
+    },
+
+    // ─── Build a single question card ───
+    _card(q) {
+        const el = document.createElement("div");
+        el.className = "q-card"+(q.isOpen?"":" ended");
+        el.id = "qc-"+q.index;
+        el.dataset.qi = q.index;
+
+        const tn = q.qType===0?"Yes/No":"Multi", tc = q.qType===0?"yesno":"multi";
+        let badges = `<span class="q-badge ${tc}">${tn}</span>`;
+        if (!q.isOpen && q.hidden)    badges += ' <span class="q-badge hidden-badge">Hidden</span>';
+        else if (!q.isOpen)           badges += ' <span class="q-badge ended-badge">Ended</span>';
+
+        let timer = "";
+        if (q.isOpen && q.deadline>0) timer = `<div class="q-timer" id="tm-${q.index}">⏱ …</div>`;
+        else if (q.isOpen && q.deadline===0) timer = '<div class="q-timer no-limit">∞ No time limit</div>';
+
+        let opts = '<div class="q-options">';
+        for (let i=0; i<q.options.length; i++) {
+            const c = q.votes[i];
+            const p = q.total>0 ? Math.round(c/q.total*100) : 0;
+            const f = FILLS[i%FILLS.length];
+            let wc="", wl="";
+            if (q.winner && q.winner.name===q.options[i] && q.winner.votes>0) {
+                wc=" winner-option"; wl='<span class="winner-label">🏆 Winner</span>';
+            }
+            const dis = (!q.isOpen||q.voted) ? "disabled" : "";
+            const act = (q.isOpen&&!q.voted) ? `data-act="vote" data-qi="${q.index}" data-oi="${i}"` : "";
+            opts += `<div class="option-item"><button class="option-btn${wc}" ${dis} ${act} id="ob-${q.index}-${i}"><div class="progress-fill ${f}" id="fl-${q.index}-${i}" style="width:${p}%"></div><span class="opt-name">${esc(q.options[i])}${wl}</span><span class="opt-stats" id="st-${q.index}-${i}"><span class="vc">${c}</span><span class="pct">${p}%</span></span></button></div>`;
+        }
+        opts += "</div>";
+
+        const vc = q.voted?"visible":"", hc = (S.owner&&q.isOpen)?"visible":"";
+        el.innerHTML = `<div class="q-card-header"><span class="q-index">#${q.index+1}</span><div>${badges}</div></div><div class="q-text">${esc(q.text)}</div>${timer}${opts}<div class="q-voted-badge ${vc}" id="vb-${q.index}">✓ You voted</div><div class="q-total-votes" id="tot-${q.index}">${q.total} total vote${q.total!==1?"s":""}</div><button class="btn-hide-q ${hc}" data-act="hide" data-qi="${q.index}">🚫 End Voting (Hide)</button>`;
+
+        if (q.isOpen && q.deadline>0) requestAnimationFrame(()=>TM.start(q.index, q.deadline));
+        return el;
+    },
+};
+
+// ═════════════════════════════════════════════════════
+//  ADMIN ACTIONS
+// ═════════════════════════════════════════════════════
+const Admin = {
+    async addYN() {
+        const text = document.getElementById("ynText").value.trim();
+        const dur = parseInt(document.getElementById("ynDur").value)||0;
+        if (!text) return Toast.show("Enter a question.","error");
+        const restore = UI.btnLoad(document.getElementById("btnYN"),"Creating…");
+        try {
+            const tx = await S.wc.addQuestion(0, text, [], dur);
+            Toast.show("Transaction sent…","info");
+            await tx.wait();
+            // ★ Immediately fetch and render — don't wait for event
+            const count = (await S.rc.getQuestionCount()).toNumber();
+            const qi = count - 1;
+            await Chain.fetchOne(qi);
+            UI.placeCard(qi);
+            UI.counts();
+            Toast.show("Yes/No poll created! 🟢","success");
+            document.getElementById("ynText").value = "";
+        } catch(e) { Toast.show(e.reason||e.message||"Failed","error"); }
+        restore();
+    },
+
+    async addMC() {
+        const text = document.getElementById("mcText").value.trim();
+        const dur = parseInt(document.getElementById("mcDur").value)||0;
+        const opts = [...document.querySelectorAll(".mc-opt")].map(e=>e.value.trim()).filter(Boolean);
+        if (!text) return Toast.show("Enter a question.","error");
+        if (opts.length<2) return Toast.show("Need at least 2 options.","error");
+        const restore = UI.btnLoad(document.getElementById("btnMC"),"Creating…");
+        try {
+            const tx = await S.wc.addQuestion(1, text, opts, dur);
+            Toast.show("Transaction sent…","info");
+            await tx.wait();
+            // ★ Immediately fetch and render
+            const count = (await S.rc.getQuestionCount()).toNumber();
+            const qi = count - 1;
+            await Chain.fetchOne(qi);
+            UI.placeCard(qi);
+            UI.counts();
+            Toast.show("Multi-choice poll created! 🔵","success");
+            document.getElementById("mcText").value = "";
+            this._resetOpts();
+        } catch(e) { Toast.show(e.reason||e.message||"Failed","error"); }
+        restore();
+    },
+
+    async hide(qi) {
+        if (!confirm("End voting on poll #"+(qi+1)+"? Cannot be undone.")) return;
+        try {
+            const tx = await S.wc.hideQuestion(qi);
+            Toast.show("Hiding…","info");
+            await tx.wait();
+            // ★ Immediately update — don't wait for event
+            await Chain.fetchOne(qi);
+            UI.placeCard(qi);
+            UI.counts();
+            Toast.show("Voting ended 🏁","success");
+            confetti();
+        } catch(e) { Toast.show(e.reason||e.message||"Failed","error"); }
+    },
+
+    addOpt() {
+        const c = document.getElementById("mcOpts");
+        const n = c.querySelectorAll(".option-row").length+1;
+        const r = document.createElement("div"); r.className="option-row";
+        r.innerHTML = `<input class="form-input mc-opt" placeholder="Option ${n}"><button class="btn-remove-option" data-act="rmopt">×</button>`;
+        c.appendChild(r);
+    },
+
+    rmOpt(btn) {
+        const c = document.getElementById("mcOpts");
+        if (c.querySelectorAll(".option-row").length<=2) return Toast.show("Minimum 2 options.","error");
+        btn.closest(".option-row").remove();
+    },
+
+    toggle() {
+        document.getElementById("adminPanel").classList.toggle("open");
+        document.getElementById("adminToggle").classList.toggle("open");
+    },
+
+    _resetOpts() {
+        document.getElementById("mcOpts").innerHTML =
+            '<div class="option-row"><input class="form-input mc-opt" placeholder="Option 1"><button class="btn-remove-option" data-act="rmopt">×</button></div><div class="option-row"><input class="form-input mc-opt" placeholder="Option 2"><button class="btn-remove-option" data-act="rmopt">×</button></div>';
+    },
+};
+
+// ═════════════════════════════════════════════════════
+//  CONNECT / DISCONNECT
+// ═════════════════════════════════════════════════════
+async function connect() {
+    if (S.on) { disconnect(); return; }
+    if (CFG.addr==="YOUR_CONTRACT_ADDRESS_HERE") return Toast.show("Set your contract address in the code.","error");
+    if (!window.ethereum) return Toast.show("Install MetaMask first.","error");
+
+    try {
+        S.provider = new ethers.providers.Web3Provider(window.ethereum,"any");
+        await S.provider.send("eth_requestAccounts",[]);
+        const net = await S.provider.getNetwork();
+
+        if (net.chainId !== CFG.chain) {
+            try {
+                await window.ethereum.request({method:"wallet_switchEthereumChain",params:[{chainId:CFG.hex}]});
+            } catch(sw) {
+                if (sw.code===4902) {
+                    await window.ethereum.request({method:"wallet_addEthereumChain",params:[{chainId:CFG.hex,chainName:CFG.name,rpcUrls:[CFG.rpc],nativeCurrency:{name:"ETH",symbol:"ETH",decimals:18},blockExplorerUrls:[CFG.scan]}]});
+                } else { Toast.show("Switch to Base Sepolia.","error"); return; }
+            }
+            S.provider = new ethers.providers.Web3Provider(window.ethereum,"any");
+        }
+
+        S.signer = S.provider.getSigner();
+        S.addr = (await S.signer.getAddress()).toLowerCase();
+        S.wc = new ethers.Contract(CFG.addr, ABI, S.signer);
+        S.rc = new ethers.Contract(CFG.addr, ABI, S.provider);
+        S.owner = (await S.rc.owner()).toLowerCase() === S.addr;
+        S.on = true;
+
+        UI.connected(S.addr);
+        const ok = await Chain.fetchAll();
+        if (ok) UI.renderAll();
+        Ev.sub();
+        Toast.show("Connected: "+trunc(S.addr),"success");
+    } catch(e) {
+        console.error(e);
+        Toast.show(e.reason||e.message||"Connection failed","error");
+        disconnect();
+    }
+}
+
+function disconnect() {
+    Ev.unsub();
+    TM.stopAll();
+    S.qs.clear();
+    S.provider=null; S.signer=null; S.wc=null; S.rc=null;
+    S.addr=null; S.owner=false; S.on=false;
+    S.busy=false; S.gen++; S.voting.clear();
+    UI.disconnected();
+}
+
+// ═════════════════════════════════════════════════════
+//  CAST VOTE — guarded against double-tap
+// ═════════════════════════════════════════════════════
+async function vote(qi, oi) {
+    if (S.voting.has(qi)) return;
+    S.voting.add(qi);
+
+    const btn = document.getElementById(`ob-${qi}-${oi}`);
+    const nameEl = btn?.querySelector(".opt-name");
+    const origHTML = nameEl?.innerHTML || "";
+
+    const q = S.qs.get(qi);
+    if (q) q.options.forEach((_,i)=>{
+        const b = document.getElementById(`ob-${qi}-${i}`);
+        if (b) b.disabled = true;
+    });
+    if (nameEl) nameEl.innerHTML = '<span class="spinner"></span> Confirming…';
+
+    try {
+        const tx = await S.wc.castVote(qi, oi);
+        Toast.show("Transaction sent…","info");
+        await tx.wait();
+
+        await Chain.fetchOne(qi);
+
+        // ★ Full card rebuild so spinner is gone, voted badge shows,
+        //   buttons are disabled, and counts are correct
+        UI.placeCard(qi);
+        UI.counts();
+
+        Toast.show("Vote recorded! 🎉","success");
+    } catch(e) {
+        console.error(e);
+        Toast.show(e.reason||e.data?.message||e.message||"Vote failed","error");
+        if (nameEl) nameEl.innerHTML = origHTML;
+        const qr = S.qs.get(qi);
+        if (qr && !qr.voted) qr.options.forEach((_,i)=>{
+            const b = document.getElementById(`ob-${qi}-${i}`);
+            if (b) b.disabled = false;
+        });
+    } finally {
+        S.voting.delete(qi);
+    }
+}
+
+// ═════════════════════════════════════════════════════
+//  CONFETTI
+// ═════════════════════════════════════════════════════
+function confetti() {
+    const cc=["#8b5cf6","#06b6d4","#f59e0b","#10b981","#ef4444","#ec4899","#3b82f6"];
+    for(let i=0;i<80;i++){const p=document.createElement("div");p.className="confetti-piece";p.style.left=Math.random()*100+"vw";p.style.width=(Math.random()*8+5)+"px";p.style.height=(Math.random()*8+5)+"px";p.style.backgroundColor=cc[Math.floor(Math.random()*cc.length)];p.style.borderRadius=Math.random()>.5?"50%":"2px";p.style.animationDuration=(Math.random()*2+2.5)+"s";p.style.animationDelay=(Math.random()*1.5)+"s";document.body.appendChild(p);setTimeout(()=>p.remove(),5000);}
+}
+
+// ═════════════════════════════════════════════════════
+//  UTILITIES
+// ═════════════════════════════════════════════════════
+function trunc(a){return a?a.slice(0,6)+"…"+a.slice(-4):"";}
+function esc(s){const d=document.createElement("div");d.textContent=s;return d.innerHTML;}
+
+// ═════════════════════════════════════════════════════
+//  EVENT DELEGATION — one listener, zero duplication
+// ═════════════════════════════════════════════════════
+function setupDelegation() {
+    document.querySelector("main").addEventListener("click", e => {
+        const t = e.target.closest("[data-act]");
+        if (!t) return;
+        const a = t.dataset.act;
+        if (a==="vote")  vote(+t.dataset.qi, +t.dataset.oi);
+        if (a==="hide")  Admin.hide(+t.dataset.qi);
+        if (a==="rmopt") Admin.rmOpt(t);
+    });
+    D.btnH.addEventListener("click", connect);
+    document.getElementById("btnHero").addEventListener("click", connect);
+    document.getElementById("adminToggle").addEventListener("click", Admin.toggle);
+    document.getElementById("btnYN").addEventListener("click", ()=>Admin.addYN());
+    document.getElementById("btnMC").addEventListener("click", ()=>Admin.addMC());
+    document.getElementById("btnAddOpt").addEventListener("click", ()=>Admin.addOpt());
+}
+
+// ═════════════════════════════════════════════════════
+//  METAMASK HANDLERS — registered once
+// ═════════════════════════════════════════════════════
+function setupMM() {
+    if (!window.ethereum) return;
+    window.ethereum.on("accountsChanged", accs => { disconnect(); if(accs.length>0) connect(); });
+    window.ethereum.on("chainChanged", () => { disconnect(); connect(); });
+}
+
+// ═════════════════════════════════════════════════════
+//  INIT
+// ═════════════════════════════════════════════════════
+async function init() {
+    D = {
+        toasts:  document.getElementById("toastBox"),
+        hero:    document.getElementById("hero"),
+        app:     document.getElementById("app"),
+        adminW:  document.getElementById("adminWrap"),
+        gridA:   document.getElementById("gridActive"),
+        gridE:   document.getElementById("gridEnded"),
+        cntA:    document.getElementById("cntActive"),
+        cntE:    document.getElementById("cntEnded"),
+        endWrap: document.getElementById("endedWrap"),
+        net:     document.getElementById("netBadge"),
+        btnH:    document.getElementById("btnHead"),
+        foot:    document.getElementById("footAddr"),
+    };
+    setupDelegation();
+    setupMM();
+    setInterval(()=>Toast.gc(), 10000);
+
+    // Auto-reconnect if wallet was previously authorized
+    if (window.ethereum && CFG.addr !== "YOUR_CONTRACT_ADDRESS_HERE") {
+        try {
+            const accs = await window.ethereum.request({method:"eth_accounts"});
+            if (accs.length > 0) await connect();
+        } catch(_){}
+    }
+}
+
+document.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>
